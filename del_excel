@@ -87,32 +87,22 @@ class demo(object):
 
         df = df.fillna(axis=0, method='ffill')
 
+
+
         # print(df.shape[0])
         # print(df.loc[1, '家具名称'])
 
         for i in range(df.shape[0]):
             if str.isalpha(df.loc[i, '家具名称']):
+                #去掉'家具名称'列中的空格
+                df.loc[i, '家具名称'] = df.loc[i, '家具名称'].replace(' ', '')
                 continue
             else:
+                #去掉'家具名称'列中的字母,空格,和'.'
                 remove_digits = str.maketrans('', '', digits)
                 df.loc[i, '家具名称'] = df.loc[i, '家具名称'].translate(remove_digits)
-
-
-        #
-        # for i in len(df['家具名称']):
-        #     if str.isalpha(df['家具名称'][i]):
-        #         continue
-        #     else:
-        #         remove_digits = str.maketrans('', '', digits)
-        #         df['家具名称'][i] = df['家具名称'][i].translate(remove_digits)
-
-
-
-
-
-
-
-        #df['数量'] = df['数量'].astype(int)
+                df.loc[i, '家具名称'] = df.loc[i, '家具名称'].replace('.','')
+                df.loc[i, '家具名称'] = df.loc[i, '家具名称'].replace(' ', '')
 
 
 
