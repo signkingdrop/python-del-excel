@@ -1,0 +1,162 @@
+import pandas as pd # 数据处理库
+import numpy as np # 数据处理库
+import tkinter as tk # 图形界面库
+from tkinter import filedialog # 图形界面库的文件对话框模块
+from tkinter import messagebox # 图形界面库的弹窗模块
+import xlrd
+
+#定义一个类
+class demo(object):
+    def __init__(self):
+        window = tk.Tk()
+        window.geometry('400x500')
+        window.title('Excel文件处理')
+
+        # 创建一个按钮,按钮放在window窗口上
+        # 按钮上的字是“选择文件”,按下后触发功能“cho_files”函数
+        self.bo_cho = tk.Button(window, text='选择文件', command=self.cho_files)
+
+        self.bo_deal = tk.Button(window, text='处理文件', command=self.deal_files)
+
+        # 创建一个标签
+        lable1 = tk.Label(window, text='可在下方输入需要排除的关键词,空格隔开')
+
+        # 创建一个多行文本框,放在window窗口上
+        self.Text_word = tk.Text(window)
+        self.Text_word1 = tk.Text(window, height=5)
+
+        # 往多行文本框插入文字“京东 自营 旗舰店 以上”
+        self.Text_word.insert('insert', '京东 自营 旗舰店 以上')
+
+        # 放置按钮等部件（之前只是创建,没有放置）
+        # pack是一种布局方式,叫“相对布局”。
+        # 还有其他布局方式：place(绝对布局,就是像输入坐标一样布局)
+        # grid(网格布局,把界面分为行行列列来布局)
+        self.bo_cho.pack()
+        self.Text_word1.pack()
+        self.bo_deal.pack()
+        lable1.pack()
+        self.Text_word.pack()
+
+        self.file = None  # 定义一个变量,来接收单个文件,例：'D:/product/文件1.xls'
+        self.files = None  # 来接收多个文件,例：('D:/product/文件1.xls', 'D:/product/文件2.xls')
+        self.file_name = None  # 用来接收文件名称,例：‘文件1.xls’
+        self.files_path = None  # 用来接收文件的路径,例：‘D:/product/’
+
+        # dataFrame 为一种数据格式,有行和列
+        # 新建一个表格,表头为“竞争激烈度”等,有两行为“0”的数据
+        self.content = pd.DataFrame(
+            {'竞争激烈度': ['0', '0'], '关键词': ['0', '0'], '搜索指数': ['0', '0'], '全网商品数': ['0', '0']})
+
+        tk.mainloop()
+
+
+    def cho_files(self):  # 创建功能：选择文件
+        # filedialog.askopenfilenames能打开“选择文件的窗口”
+        # 如果用户选择了“文件1”和“文件2”,那么会返回('D:/product/文件1.xls', 'D:/product/文件2.xls')
+        # 如果用户没有选择文件(点击了取消),那么会返回空字符串''
+        self.files = filedialog.askopenfilenames()
+
+        # 如果self.files为真,则执行下列代码（空字符串''会被判断为假）
+        if self.files:
+
+            self.Text_word1.insert('end', self.files)
+            self.Text_word1.insert('insert','\n')
+
+            # 取self.files中的第一个,即'D:/product/文件1.xls'
+            afile = self.files[0]
+
+            # 把'D:/product/文件1.xls'用 '/' 切分,并选中最后一个元素,即‘文件1.xls’
+            filename = afile.split('/')[-1]
+
+            # 把 'D:/product/文件1.xls' 中的 ‘文件1.xls’替换成空字符串(效果相当于删掉)
+            # 得到 'D:/product/'
+            self.files_path = afile.replace(filename, '')
+
+        #     for i in range(len(self.files)):
+        #         print("序号：%s   值：%s" % (i + 1, self.files[i]))
+        # print("-----"+filename+"----"+self.files_path);
+
+    def deal_per_file(self, file):
+        # 提取到文件名‘文件1’
+        name = file.split('/')[-1].split('.')[0]
+
+        # 根据文件路径,读取文件
+        df = pd.read_excel(file)
+
+        # 下面只是处理我的文件的方式,大家不一定适用
+
+        # 把表格中的 ‘-’ 替换成 0
+        df = df.replace('-', 0)
+
+        # 把“搜索指数”这一列数据,转换成浮点数类型
+        df['搜索指数'] = df['搜索指数'].astype(float)
+        df['全网商品数'] = df['全网商品数'].astype(float)
+
+        # 把 '全网商品数'列 除以 '搜索指数'列,并四舍五入到小数点后两位
+        # 如果没有'竞争激烈度'这一列,就新建
+        df['竞争激烈度'] = (df['全网商品数'] / df['搜索指数']).round(decimals=2)
+
+        # 重新变列的顺序
+        df = df.reindex(columns=['竞争激烈度', '关键词', '搜索指数', '全网商品数'])
+
+        # 根据‘竞争激烈度’这一列的大小排序
+        df = df.sort_values('竞争激烈度', ascending=False)
+
+        # 对'文本输入框'调用get方法,获得输入的“京东 自营 旗舰店 以上”
+        # 把‘ ’替换成‘|’,得到‘京东|自营|旗舰店|以上’
+        Text_word = self.Text_word.get('1.0', 'end').replace(' ', '|')
+
+
+
+        # 选中‘关键词’中包含Text_word的行
+        Text_word = df['关键词'].str.contains(Text_word)
+
+
+        # 反选
+        df = df[~Text_word]
+
+
+        # 拼接 self.content 和 df 这两个表格
+        self.content = pd.concat((self.content, df), axis=0, join='outer')
+
+        # 返回 表格的数据 和 表格的名称
+        return df, name
+
+    def deal_files(self):
+
+        # self.files_path 即上文定义的 ‘D:/product/’
+        # 创建一个Excel写入器,文件生成在 ‘D:/product/总表.xlsx’
+        writer = pd.ExcelWriter(self.files_path + '总表.xlsx', engine='xlsxwriter')
+
+        # 把所有文件路径,依次赋值给 self.file
+        for self.file in self.files:
+            # self.deal_per_file 就是我们上个写的函数
+            # 把单个文件路径传入函数
+            # 返回“表格数据”和“表格内容”
+            df, name = self.deal_per_file(self.file)
+
+            # 把“表格数据”写入excel文件,并指定写入哪个文件 和 sheet名称
+            df.to_excel(writer, sheet_name=name)
+            # 循环处理所有文件
+
+        # self.content 包含了所有文件的数据
+        # 把 self.content 按'竞争激烈度'的大小排序
+        self.content = self.content.astype(str)
+        self.content = self.content.sort_values('竞争激烈度', ascending=False)
+
+        # 把“表格数据”写入excel文件,并指定写入哪个文件 和 sheet名称
+        self.content.to_excel(writer, sheet_name='总表')
+
+        # 保存这个excel文件
+        writer.save()
+
+        # 重置 self.content
+        self.content = pd.DataFrame(
+            {'竞争激烈度': ['0', '0'], '关键词': ['0', '0'], '搜索指数': ['0', '0'], '全网商品数': ['0', '0']})
+
+        # 弹出窗口,窗口标题为“成功”,窗口含有信息“成功生成文件。”
+        messagebox.showinfo(title='成功', message='成功生成文件。')
+
+if __name__ == __name__:
+    demo()
